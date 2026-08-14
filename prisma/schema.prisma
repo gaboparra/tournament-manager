@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum TournamentStatus {
+  DRAFT
+  GROUP_STAGE
+  KNOCKOUT_STAGE
+  FINISHED
+}
+
+enum MatchPhase {
+  GROUP
+  KNOCKOUT
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+}
+
+enum KnockoutRound {
+  ROUND_OF_16
+  QUARTERFINAL
+  SEMIFINAL
+  FINAL
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  password      String
+  name          String
+  createdAt     DateTime     @default(now())
+
+  tournaments   Tournament[] @relation("OrganizedTournaments")
+}
+
+model Tournament {
+  id            String            @id @default(uuid())
+  name          String
+  status        TournamentStatus  @default(DRAFT)
+  groupSize     Int               @default(4)  // equipos por grupo
+  qualifiersPerGroup Int          @default(2)  // clasifican a knockout
+  createdAt     DateTime          @default(now())
+
+  organizerId   String
+  organizer     User              @relation("OrganizedTournaments", fields: [organizerId], references: [id])
+
+  teams         Team[]
+  groups        Group[]
+  matches       Match[]
+}
+
+model Team {
+  id            String       @id @default(uuid())
+  name          String
+  logoUrl       String?
+
+  tournamentId  String
+  tournament    Tournament   @relation(fields: [tournamentId], references: [id])
+
+  groupId       String?
+  group         Group?       @relation(fields: [groupId], references: [id])
+
+  players       Player[]
+
+  homeMatches   Match[]      @relation("HomeTeam")
+  awayMatches   Match[]      @relation("AwayTeam")
+  wonMatches    Match[]      @relation("WinnerTeam")
+
+  // stats de fase de grupos (se recalculan al cargar resultados)
+  points        Int          @default(0)
+  played        Int          @default(0)
+  wins          Int          @default(0)
+  draws         Int          @default(0)
+  losses        Int          @default(0)
+  goalsFor      Int          @default(0)
+  goalsAgainst  Int          @default(0)
+}
+
+model Player {
+  id       String @id @default(uuid())
+  name     String
+
+  teamId   String
+  team     Team   @relation(fields: [teamId], references: [id])
+}
+
+model Group {
+  id            String       @id @default(uuid())
+  name          String       // "Grupo A", "Grupo B"
+
+  tournamentId  String
+  tournament    Tournament   @relation(fields: [tournamentId], references: [id])
+
+  teams         Team[]
+  matches       Match[]
+}
+
+model Match {
+  id            String        @id @default(uuid())
+  phase         MatchPhase
+  round         KnockoutRound? // solo para KNOCKOUT
+  status        MatchStatus   @default(SCHEDULED)
+
+  homeScore     Int?
+  awayScore     Int?
+
+  tournamentId  String
+  tournament    Tournament    @relation(fields: [tournamentId], references: [id])
+
+  groupId       String?       // solo para GROUP
+  group         Group?        @relation(fields: [groupId], references: [id])
+
+  homeTeamId    String
+  homeTeam      Team          @relation("HomeTeam", fields: [homeTeamId], references: [id])
+
+  awayTeamId    String
+  awayTeam      Team          @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  winnerId      String?       // solo se define en KNOCKOUT
+  winner        Team?         @relation("WinnerTeam", fields: [winnerId], references: [id])
+
+  createdAt     DateTime      @default(now())
+}
