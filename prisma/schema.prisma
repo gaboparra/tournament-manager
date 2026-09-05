@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -35,100 +35,114 @@ enum KnockoutRound {
 }
 
 model User {
-  id            String       @id @default(uuid())
-  email         String       @unique
-  password      String
-  name          String
-  createdAt     DateTime     @default(now())
+  id        String @id @default(uuid())
+  email     String @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
 
-  tournaments   Tournament[] @relation("OrganizedTournaments")
+  tournaments Tournament[] @relation("OrganizedTournaments")
+  teams       Team[]       @relation("OwnedTeams")
 }
 
 model Tournament {
-  id            String            @id @default(uuid())
-  name          String
-  status        TournamentStatus  @default(DRAFT)
-  groupSize     Int               @default(4)  // equipos por grupo
-  qualifiersPerGroup Int          @default(2)  // clasifican a knockout
-  createdAt     DateTime          @default(now())
+  id                 String           @id @default(uuid())
+  name               String
+  status             TournamentStatus @default(DRAFT)
+  groupSize          Int              @default(4)
+  qualifiersPerGroup Int              @default(2)
+  createdAt          DateTime         @default(now())
 
-  organizerId   String
-  organizer     User              @relation("OrganizedTournaments", fields: [organizerId], references: [id])
+  organizerId String
+  organizer   User   @relation("OrganizedTournaments", fields: [organizerId], references: [id])
 
-  teams         Team[]
+  registrations TournamentTeam[]
   groups        Group[]
   matches       Match[]
 }
 
 model Team {
-  id            String       @id @default(uuid())
-  name          String
-  logoUrl       String?
+  id        String   @id @default(uuid())
+  name      String
+  logoUrl   String?
+  createdAt DateTime @default(now())
 
-  tournamentId  String
-  tournament    Tournament   @relation(fields: [tournamentId], references: [id])
-
-  groupId       String?
-  group         Group?       @relation(fields: [groupId], references: [id])
+  ownerId String
+  owner   User   @relation("OwnedTeams", fields: [ownerId], references: [id])
 
   players       Player[]
-
-  homeMatches   Match[]      @relation("HomeTeam")
-  awayMatches   Match[]      @relation("AwayTeam")
-  wonMatches    Match[]      @relation("WinnerTeam")
-
-  // stats de fase de grupos (se recalculan al cargar resultados)
-  points        Int          @default(0)
-  played        Int          @default(0)
-  wins          Int          @default(0)
-  draws         Int          @default(0)
-  losses        Int          @default(0)
-  goalsFor      Int          @default(0)
-  goalsAgainst  Int          @default(0)
+  registrations TournamentTeam[]
 }
 
 model Player {
-  id       String @id @default(uuid())
-  name     String
+  id   String @id @default(uuid())
+  name String
 
-  teamId   String
-  team     Team   @relation(fields: [teamId], references: [id])
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model TournamentTeam {
+  id String @id @default(uuid())
+
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  points       Int @default(0)
+  played       Int @default(0)
+  wins         Int @default(0)
+  draws        Int @default(0)
+  losses       Int @default(0)
+  goalsFor     Int @default(0)
+  goalsAgainst Int @default(0)
+
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+  wonMatches  Match[] @relation("WinnerTeam")
+
+  @@unique([tournamentId, teamId])
 }
 
 model Group {
-  id            String       @id @default(uuid())
-  name          String       // "Grupo A", "Grupo B"
+  id   String @id @default(uuid())
+  name String
 
-  tournamentId  String
-  tournament    Tournament   @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
-  teams         Team[]
+  registrations TournamentTeam[]
   matches       Match[]
 }
 
 model Match {
-  id            String        @id @default(uuid())
-  phase         MatchPhase
-  round         KnockoutRound? // solo para KNOCKOUT
-  status        MatchStatus   @default(SCHEDULED)
+  id     String         @id @default(uuid())
+  phase  MatchPhase
+  round  KnockoutRound?
+  status MatchStatus    @default(SCHEDULED)
 
-  homeScore     Int?
-  awayScore     Int?
+  homeScore Int?
+  awayScore Int?
 
-  tournamentId  String
-  tournament    Tournament    @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
-  groupId       String?       // solo para GROUP
-  group         Group?        @relation(fields: [groupId], references: [id])
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
-  homeTeamId    String
-  homeTeam      Team          @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId String
+  homeTeam   TournamentTeam @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
 
-  awayTeamId    String
-  awayTeam      Team          @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId String
+  awayTeam   TournamentTeam @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
 
-  winnerId      String?       // solo se define en KNOCKOUT
-  winner        Team?         @relation("WinnerTeam", fields: [winnerId], references: [id])
+  winnerId String?
+  winner   TournamentTeam? @relation("WinnerTeam", fields: [winnerId], references: [id], onDelete: SetNull)
 
-  createdAt     DateTime      @default(now())
+  createdAt DateTime @default(now())
 }
