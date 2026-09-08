@@ -1,7 +1,8 @@
 import { Router } from "express";
 import * as tournamentController from "../controllers/tournament.controller.js";
+import * as groupStageController from "../controllers/groupStage.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
-import { requireTournamentOwnership } from "../middlewares/ownership.middleware.js";
+import { requireTournamentOwnership } from "../middlewares/ownership/tournament.ownership.js";
 import { validate } from "../middlewares/validate.js";
 import {
   createTournamentSchema,
@@ -31,6 +32,13 @@ router.delete(
   authenticate,
   requireTournamentOwnership,
   tournamentController.remove,
+);
+
+router.post(
+  "/:id/group-stage/start",
+  authenticate,
+  requireTournamentOwnership,
+  groupStageController.start,
 );
 
 export default router;

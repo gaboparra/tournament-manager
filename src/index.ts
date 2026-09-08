@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes.js";
 import tournamentRoutes from "./routes/tournament.routes.js";
 import teamRoutes from "./routes/team.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
+import matchRoutes from "./routes/match.routes.js";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api", registrationRoutes);
+app.use("/api/matches", matchRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as teamController from "../controllers/team.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
-import { requireTeamOwnership } from "../middlewares/ownership.middleware.js";
+import { requireTeamOwnership } from "../middlewares/ownership/team.ownership.js";
 import { validate } from "../middlewares/validate.js";
 import {
   createTeamSchema,
