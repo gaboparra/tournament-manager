@@ -20,12 +20,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api", registrationRoutes);
-app.use("/api/matches", matchRoutes);
-
+app.use("/api/", matchRoutes);
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
-
 app.use(errorHandler);
 
 app.listen(env.port, () => {

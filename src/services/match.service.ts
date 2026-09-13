@@ -1,5 +1,8 @@
 import { prisma } from "../config/prisma.js";
-import type { LoadResultInput } from "../schemas/match.schema.js";
+import type {
+  LoadResultInput,
+  ScheduleMatchInput,
+} from "../schemas/match.schema.js";
 
 export async function loadMatchResult(matchId: string, input: LoadResultInput) {
   const match = await prisma.match.findUnique({ where: { id: matchId } });
@@ -12,12 +15,17 @@ export async function loadMatchResult(matchId: string, input: LoadResultInput) {
     throw new Error("MATCH_ALREADY_FINISHED");
   }
 
+  const { awayTeamId } = match;
+
+  if (!awayTeamId) {
+    throw new Error("MATCH_HAS_NO_OPPONENT");
+  }
+
   const { homeScore, awayScore } = input;
 
   let winnerId: string | null = null;
   if (homeScore > awayScore) winnerId = match.homeTeamId;
-  else if (awayScore > homeScore) winnerId = match.awayTeamId;
-  // si empatan, winnerId queda null
+  else if (awayScore > homeScore) winnerId = awayTeamId;
 
   await prisma.$transaction(async (tx) => {
     await tx.match.update({
@@ -26,7 +34,7 @@ export async function loadMatchResult(matchId: string, input: LoadResultInput) {
     });
 
     await updateTeamStats(tx, match.homeTeamId, homeScore, awayScore);
-    await updateTeamStats(tx, match.awayTeamId, awayScore, homeScore);
+    await updateTeamStats(tx, awayTeamId, awayScore, homeScore);
   });
 
   return prisma.match.findUnique({ where: { id: matchId } });
@@ -53,5 +61,32 @@ async function updateTeamStats(
       goalsAgainst: { increment: goalsAgainst },
       points: { increment: isWin ? 3 : isDraw ? 1 : 0 },
     },
+  });
+}
+
+export async function getMatchesByTournament(tournamentId: string) {
+  return prisma.match.findMany({
+    where: { tournamentId },
+    include: {
+      homeTeam: { include: { team: true } },
+      awayTeam: { include: { team: true } },
+    },
+    orderBy: [{ phase: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function scheduleMatch(
+  matchId: string,
+  input: ScheduleMatchInput,
+) {
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+
+  if (!match) {
+    throw new Error("MATCH_NOT_FOUND");
+  }
+
+  return prisma.match.update({
+    where: { id: matchId },
+    data: { scheduledAt: input.scheduledAt },
   });
 }

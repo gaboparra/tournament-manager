@@ -126,8 +126,9 @@ model Match {
   round  KnockoutRound?
   status MatchStatus    @default(SCHEDULED)
 
-  homeScore Int?
-  awayScore Int?
+  homeScore   Int?
+  awayScore   Int?
+  scheduledAt DateTime?
 
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -138,8 +139,8 @@ model Match {
   homeTeamId String
   homeTeam   TournamentTeam @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
 
-  awayTeamId String
-  awayTeam   TournamentTeam @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  awayTeamId String?
+  awayTeam   TournamentTeam? @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
 
   winnerId String?
   winner   TournamentTeam? @relation("WinnerTeam", fields: [winnerId], references: [id], onDelete: SetNull)

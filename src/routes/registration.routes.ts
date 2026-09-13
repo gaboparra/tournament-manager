@@ -15,12 +15,10 @@ router.post(
   requireTeamOwnershipForRegistration,
   registrationController.register,
 );
-
 router.get(
   "/tournaments/:tournamentId/registrations",
   registrationController.getAll,
 );
-
 router.delete(
   "/registrations/:id",
   authenticate,

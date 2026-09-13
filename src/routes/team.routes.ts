@@ -18,7 +18,6 @@ router.post(
   teamController.create,
 );
 router.get("/mine", authenticate, teamController.getMine);
-
 router.patch(
   "/:id",
   authenticate,
@@ -32,7 +31,6 @@ router.delete(
   requireTeamOwnership,
   teamController.remove,
 );
-
 router.post(
   "/:id/players",
   authenticate,
