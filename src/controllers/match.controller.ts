@@ -67,3 +67,54 @@ export async function schedule(req: AuthRequest, res: Response): Promise<void> {
     throw error;
   }
 }
+
+export async function start(req: AuthRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  if (typeof id !== "string") {
+    res.status(400).json({ error: "Match id is required" });
+    return;
+  }
+
+  try {
+    const match = await matchService.startMatch(id);
+    res.status(200).json(match);
+  } catch (error) {
+    if (error instanceof Error && error.message === "MATCH_NOT_FOUND") {
+      res.status(404).json({ error: "Match not found" });
+      return;
+    }
+    if (error instanceof Error && error.message === "INVALID_MATCH_STATUS") {
+      res.status(409).json({ error: "Match must be SCHEDULED to start" });
+      return;
+    }
+    throw error;
+  }
+}
+
+export async function updateLiveScore(
+  req: AuthRequest,
+  res: Response,
+): Promise<void> {
+  const { id } = req.params;
+
+  if (typeof id !== "string") {
+    res.status(400).json({ error: "Match id is required" });
+    return;
+  }
+
+  try {
+    const match = await matchService.updateLiveScore(id, req.body);
+    res.status(200).json(match);
+  } catch (error) {
+    if (error instanceof Error && error.message === "MATCH_NOT_FOUND") {
+      res.status(404).json({ error: "Match not found" });
+      return;
+    }
+    if (error instanceof Error && error.message === "MATCH_NOT_IN_PROGRESS") {
+      res.status(409).json({ error: "Match must be IN_PROGRESS to update live score" });
+      return;
+    }
+    throw error;
+  }
+}

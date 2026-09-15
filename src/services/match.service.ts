@@ -2,7 +2,9 @@ import { prisma } from "../config/prisma.js";
 import type {
   LoadResultInput,
   ScheduleMatchInput,
+  UpdateLiveScoreInput,
 } from "../schemas/match.schema.js";
+import { getSocketServer } from "../config/socket.js";
 
 export async function loadMatchResult(matchId: string, input: LoadResultInput) {
   const match = await prisma.match.findUnique({ where: { id: matchId } });
@@ -37,7 +39,19 @@ export async function loadMatchResult(matchId: string, input: LoadResultInput) {
     await updateTeamStats(tx, awayTeamId, awayScore, homeScore);
   });
 
-  return prisma.match.findUnique({ where: { id: matchId } });
+  const updatedMatch = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      homeTeam: { include: { team: true } },
+      awayTeam: { include: { team: true } },
+    },
+  });
+
+  getSocketServer()
+    .to(`tournament:${match.tournamentId}`)
+    .emit("match-result", updatedMatch);
+
+  return updatedMatch;
 }
 
 async function updateTeamStats(
@@ -89,4 +103,53 @@ export async function scheduleMatch(
     where: { id: matchId },
     data: { scheduledAt: input.scheduledAt },
   });
+}
+
+export async function startMatch(matchId: string) {
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+
+  if (!match) {
+    throw new Error("MATCH_NOT_FOUND");
+  }
+
+  if (match.status !== "SCHEDULED") {
+    throw new Error("INVALID_MATCH_STATUS");
+  }
+
+  const updatedMatch = await prisma.match.update({
+    where: { id: matchId },
+    data: { status: "IN_PROGRESS", homeScore: 0, awayScore: 0 },
+  });
+
+  getSocketServer()
+    .to(`tournament:${match.tournamentId}`)
+    .emit("match-started", updatedMatch);
+
+  return updatedMatch;
+}
+
+export async function updateLiveScore(
+  matchId: string,
+  input: UpdateLiveScoreInput,
+) {
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+
+  if (!match) {
+    throw new Error("MATCH_NOT_FOUND");
+  }
+
+  if (match.status !== "IN_PROGRESS") {
+    throw new Error("MATCH_NOT_IN_PROGRESS");
+  }
+
+  const updatedMatch = await prisma.match.update({
+    where: { id: matchId },
+    data: { homeScore: input.homeScore, awayScore: input.awayScore },
+  });
+
+  getSocketServer()
+    .to(`tournament:${match.tournamentId}`)
+    .emit("live-score-update", updatedMatch);
+
+  return updatedMatch;
 }

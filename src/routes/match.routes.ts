@@ -6,6 +6,7 @@ import { validate } from "../middlewares/validate.js";
 import {
   loadResultSchema,
   scheduleMatchSchema,
+  updateLiveScoreSchema,
 } from "../schemas/match.schema.js";
 
 const router = Router();
@@ -24,6 +25,19 @@ router.patch(
   requireMatchOwnership,
   validate(scheduleMatchSchema),
   matchController.schedule,
+);
+router.patch(
+  "/matches/:id/start",
+  authenticate,
+  requireMatchOwnership,
+  matchController.start,
+);
+router.patch(
+  "/matches/:id/live-score",
+  authenticate,
+  requireMatchOwnership,
+  validate(updateLiveScoreSchema),
+  matchController.updateLiveScore,
 );
 
 export default router;
